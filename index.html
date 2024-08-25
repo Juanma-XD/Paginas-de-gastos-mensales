@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gastos Semanal</title>
+    <link rel="stylesheet" href="index.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+
+<body>
+    <div id="container">
+        <div class="titulo">
+            <h1>Gastos Semanal</h1>
+        </div>
+        <div class="cuadro">
+            <div class="part1">
+                <div class="titulo"><h2>Añade tus Gastos</h2></div>
+                <p>Gastos</p>
+                <input type="text" id="name" placeholder="Nombre del Gasto" disabled />
+                <p>Valor</p>
+                <input type="text" id="Cantidad" placeholder="Valor en $" disabled />
+                <button id="Boton" onclick="validar()" disabled>ENVIAR</button>
+            </div>
+            <div class="part2">
+                <div class="titulo"><h2>Listado</h2></div>
+                <table>
+                    <thead>
+                        <tr>
+                            <td>Nombre</td>
+                            <td>Cantidad</td>
+                            <td>Opciones</td>
+                        </tr>
+                    </thead>
+                    <tbody id="body">
+                    </tbody>
+                </table>
+                <h2  id="money"  style="background-color: rgb(93, 209, 255); color:black;">Presupuesto: $</h2>
+                <h2  id="residuo"  style="background-color: rgb(93, 209, 255); color:black;">Restante: $</h2>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let data = [];
+        let budget = null;
+        let editIndex = null;
+
+        document.addEventListener("DOMContentLoaded", ()=>{
+        alertainicial();
+    })
+
+        function alertainicial() {
+            Swal.fire({
+                title: 'Presupuesto inicial',
+                input: 'number',
+                inputLabel: 'Ingrese su presupuesto inicial:',
+                inputPlaceholder: 'Presupuesto',
+                inputValidator: (value) => {
+                    if (!value) {
+                        return 'Debe ingresar un valor!';
+                    } else if (parseInt(value) <= 0) {
+                        return 'El presupuesto debe ser mayor que cero!';
+                    }
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    budget = parseInt(result.value);
+                    updateBudgetDisplay();
+                    habilidarinput();
+                }
+            });
+        }
+
+        function updateBudgetDisplay() {
+            const remaining = data.reduce((sum, expense) => sum - parseFloat(expense.valor), budget);
+            const remainingPercentage = (remaining / budget) * 100;
+
+            document.getElementById("money").textContent = `Presupuesto: ${Puntodecimal(budget)}`;
+            document.getElementById("residuo").textContent = `Restante: ${Puntodecimal(remaining)}`;
+
+            let resClass = document.getElementById("residuo");
+
+            if (remainingPercentage <= 20.00 && remainingPercentage > 0) {
+                resClass.style.backgroundColor = "orange";
+            } else if (remainingPercentage <= 0) {
+                resClass.style.backgroundColor = "red";
+            } else {
+                resClass.style.backgroundColor = "greenyellow";
+            }
+
+            document.getElementById("Boton").disabled = remaining <= 0;
+        }
+
+        function habilidarinput() {
+            document.getElementById("name").disabled = false;
+            document.getElementById("Cantidad").disabled = false;
+            document.getElementById("Boton").disabled = false;
+        }
+
+        function Puntodecimal(value) {
+            return value.toLocaleString('es-ES');
+        }
+
+        function sweetalert(title, text, icon) {
+            Swal.fire({
+                title: title,
+                text: text,
+                icon: icon
+            });
+        }
+
+        function validar() {
+    let name = document.getElementById("name").value.trim();
+    let valor = parseFloat(document.getElementById("Cantidad").value.trim());
+    let remaining = data.reduce((sum, expense) => sum - parseFloat(expense.valor), budget);
+
+    if (name === "") {
+        sweetalert("Falta información", "Por favor digite el nombre del gasto", "warning");
+        return;
+    } else if (isNaN(valor) || valor <= 0) {
+        sweetalert("Información inválida", "La cantidad debe ser mayor que cero", "error");
+        return;
+    } else if (valor > remaining) {
+        sweetalert("Presupuesto excedido", "El monto ingresado excede el presupuesto restante", "error");
+        return;
+    }
+
+    if (editIndex === null) {
+        data.push({ name, valor });
+    } else {
+        data[editIndex] = { name, valor };
+        editIndex = null;
+        document.getElementById("Boton").textContent = "Agregar";
+    }
+
+    pintartabla();
+    limpiarinput();
+    updateBudgetDisplay();
+}
+
+        function pintartabla() {
+            let tableBody = document.getElementById("body");
+            tableBody.innerHTML = "";
+            data.forEach((item, index) => {
+                let row = document.createElement("tr");
+
+                let cellName = document.createElement("td");
+                cellName.textContent = item.name;
+                row.appendChild(cellName);
+
+                let cellvalor = document.createElement("td");
+                cellvalor.textContent = `${Puntodecimal(item.valor)}`;
+                row.appendChild(cellvalor);
+
+                let cellOptions = document.createElement("td");
+
+                let editButton = document.createElement("button");
+                editButton.innerHTML = "Editar";
+                editButton.classList.add("editar");
+                editButton.addEventListener("click", () => editGasto(index));
+
+                let deleteButton = document.createElement("button");
+                deleteButton.innerHTML = "Eliminar";
+                deleteButton.classList.add("eliminar");
+                deleteButton.addEventListener("click", () => deletegasto(index));
+
+                cellOptions.appendChild(editButton);
+                cellOptions.appendChild(deleteButton);
+                row.appendChild(cellOptions);
+
+                tableBody.appendChild(row);
+            });
+        }
+
+        function editGasto(index) {
+            let item = data[index];
+            document.getElementById("name").value = item.name;
+            document.getElementById("Cantidad").value = item.valor;
+            document.getElementById("Boton").textContent = "Editar";
+            editIndex = index;
+            document.getElementById("Boton").disabled = false;
+        }
+
+        function deletegasto(index) {
+            data.splice(index, 1);
+            pintartabla();
+            updateBudgetDisplay();
+        }
+
+        function limpiarinput() {
+            document.getElementById("name").value = "";
+            document.getElementById("Cantidad").value = "";
+        }
+
+    
+    </script>
+</body>
+
+</html>
